@@ -39,7 +39,7 @@
 
 <!--
   -- If there are any warnings or other messages from a prior action,
-  -- they appear above the rest of the content, just until the next 
+  -- they appear above the rest of the content, just until the next
   -- action.
   -->
 
@@ -68,7 +68,7 @@
     {    ranges: {
            'Today': [moment(), moment()],
            'Tomorrow':[moment().add(1, 'days'),
-                       moment().add(1, 'days')], 
+                       moment().add(1, 'days')],
            'This week':[moment(), moment().endOf('week')],
            'Next week':[moment().add(7, 'days').startOf('week'),
                         moment().add(7, 'days').endOf('week')],
@@ -86,21 +86,51 @@
     Show the calendar list (if we have it).  This will need to be turned into
     a form from which calendars can be picked. Up to three entries are
     shown in each row (but the order is across then down; I would
-    prefer down then across). 
+    prefer down then across).
     -->
 {% if g.calendars is defined  %}
   <div class="row">
+  <div class="g_cals"
   {% for cal in g.calendars if cal.selected %}
-          <div class="col-md-4">
-	   {{ cal.summary }}
-          </div>
-         {% if loop.index is divisibleby 3 %}
-          </div> <div class="row">
-         {% endif %}
+    <div class="col-md-4">
+      <input type="checkbox" name="calChk" value="{{ cal.id }}">
+      {{ cal.summary }}
+    </div>
+    {% if loop.index is divisibleby 3 %}
+      </div> <div class="row">
+    {% endif %}
   {% endfor %}
   </div>
 {% endif %}
-    
+
+
+<script>
+
+  $("input[name='calChk']").change(function() {
+
+    console.log("EVENT HANDLED");
+
+    // https://stackoverflow.com/questions/19766044/best-way-to-get-all-selected-checkboxes-values-in-jquery
+    var calIds = $('input[name="calChk"]:checked').map( function() {
+        return this.value;
+    }).get();
+
+    console.log(calIds);
+
+    $.ajax({
+      type: 'POST',
+      contentType: 'application/json',
+      dataType: 'json',
+      url: '/_events',
+      data: JSON.stringify({ 'ids': calIds }),
+      success: function(data) {
+
+      }
+    });
+  });
+
+</script>
+
 
   </div>  <!-- container (for bootstrap) -->
   </body> </html>
