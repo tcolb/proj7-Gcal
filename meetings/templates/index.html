@@ -104,7 +104,10 @@
   </div>
 {% endif %}
 
-<div id="all_cal_events"></div>
+<div class="row">
+  <div id="allEvents">
+  </div>
+</div>
 
 <script>
 
@@ -131,16 +134,20 @@
       data: JSON.stringify({ 'ids': calIds }),
       success: function(data) {
 
-        console.log("Got event data:");
-        console.log(data);
+        console.log("Got event data: " + data.length + " events");
+
+        console.log("Clearing old event data from UI...");
+        $("#allEvents").empty();
 
         // Iterate through events
         for (i = 0; i < data.length; i++) {
-          console.log(data[i]);
-          
+
           // Add event to html
-          var $div = $("<div>", {value: event['summary']});
-          $("#all_cal_events").append($div);
+          // http://api.jquery.com/jQuery/#jQuery2
+          var eventDiv = $("<div/>", { text: data[i]['summary'] +
+                                             ": from " + data[i]['startTime'] +
+                                             " to " + data[i]['endTime']});
+          $("#allEvents").append(eventDiv);
         }
       }
     });
