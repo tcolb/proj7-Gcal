@@ -208,18 +208,29 @@ def setrange():
 @app.route('/_events', methods=['POST', 'GET'])
 def events():
     """
-    Get event data for selected calendars
+    Get event data for selected calendars and send back to frontend
+    using AJAX
     """
-    service = get_gcal_service(valid_credentials())
-    print(flask.g)
 
+    # Get GCal service
+    service = get_gcal_service(valid_credentials())
     selected_cals = request.json['ids']
     cal_events = []
+
+    # Go through selected IDs
     for cal_id in selected_cals:
-        events = service.events().list(calendarId=str(cal_id)).execute()
-        print(events)
+        # Grab cal events for each id
+        events = service.events().list(calendarId=cal_id,
+                                       timeMin=flask.session['begin_date'].format('YYYY-MM-DDTHH:mm:ssZZ'),
+                                       timeMax=flask.session['end_date'].format('YYYY-MM-DDTHH:mm:ssZZ'),
+                                       singleEvents=True).execute()
+        
         for event in events['items']:
-            cal_events.append(event)
+            # Append the event summary, start and end times
+            cal_events.append({'summary': event['summary'],
+                               "startTime": event['start']['dateTime'],
+                               "endTime": event['end']['dateTime']})
+
     return flask.jsonify(events=cal_events)
 
 
@@ -315,7 +326,6 @@ def list_calendars(service):
     calendar_list = service.calendarList().list().execute()["items"]
     result = [ ]
     for cal in calendar_list:
-        print(cal)
         kind = cal["kind"]
         id = cal["id"]
         if "description" in cal:

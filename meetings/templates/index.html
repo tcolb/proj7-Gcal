@@ -103,18 +103,18 @@
   </div>
 {% endif %}
 
+<div id="all_cal_events"></div>
 
 <script>
 
   $("input[name='calChk']").change(function() {
-
-    console.log("EVENT HANDLED");
 
     // https://stackoverflow.com/questions/19766044/best-way-to-get-all-selected-checkboxes-values-in-jquery
     var calIds = $('input[name="calChk"]:checked').map( function() {
         return this.value;
     }).get();
 
+    console.log("Cal Selection Handled");
     console.log(calIds);
 
     $.ajax({
@@ -124,7 +124,11 @@
       url: '/_events',
       data: JSON.stringify({ 'ids': calIds }),
       success: function(data) {
-
+        for (event in data.events) {
+          console.log(event);
+          var $div = $("<div>", {value: event['summary']});
+          $("#all_cal_events").append($div);
+        }
       }
     });
   });
