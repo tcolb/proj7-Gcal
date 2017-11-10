@@ -220,12 +220,14 @@ def events():
     # Go through selected IDs
     for cal_id in selected_cals:
         # Grab cal events for each id
-        events = service.events().list(calendarId=cal_id,
-                                       timeMin=flask.session['begin_date'].format('YYYY-MM-DDTHH:mm:ssZZ'),
-                                       timeMax=flask.session['end_date'].format('YYYY-MM-DDTHH:mm:ssZZ'),
-                                       singleEvents=True).execute()
+        events = service.events().list(calendarId=cal_id, # Calendar selection
+                                       timeMin=flask.session['begin_date'].format('YYYY-MM-DDTHH:mm:ssZZ'), # Open time
+                                       timeMax=flask.session['end_date'].format('YYYY-MM-DDTHH:mm:ssZZ'),   # Close time
+                                       singleEvents=True, # No recurring event selection, fixes no summary errors
+                                       orderBy="startTime").execute() # Order events by startTime and execute query
 
         for event in events['items']:
+            print(event)
             # Append the event summary, start and end times
             result.append({'summary': event['summary'],
                            "startTime": event['start']['dateTime'],

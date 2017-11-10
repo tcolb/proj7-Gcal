@@ -105,7 +105,7 @@
 {% endif %}
 
 <div class="row">
-  <div id="allEvents">
+  <div id="allEvents" style="margin-top: 20px;">
   </div>
 </div>
 
@@ -135,13 +135,11 @@
       success: function(data) {
 
         console.log("Got event data: " + data.length + " events");
-
         console.log("Clearing old event data from UI...");
         $("#allEvents").empty();
 
         // Iterate through events
         for (i = 0; i < data.length; i++) {
-
           // Add event to html
           // http://api.jquery.com/jQuery/#jQuery2
           var eventDiv = $("<div/>", { text: data[i]['summary'] +
