@@ -215,7 +215,7 @@ def events():
     # Get GCal service
     service = get_gcal_service(valid_credentials())
     selected_cals = request.json['ids']
-    cal_events = []
+    result = [ ]
 
     # Go through selected IDs
     for cal_id in selected_cals:
@@ -224,14 +224,14 @@ def events():
                                        timeMin=flask.session['begin_date'].format('YYYY-MM-DDTHH:mm:ssZZ'),
                                        timeMax=flask.session['end_date'].format('YYYY-MM-DDTHH:mm:ssZZ'),
                                        singleEvents=True).execute()
-        
+
         for event in events['items']:
             # Append the event summary, start and end times
-            cal_events.append({'summary': event['summary'],
-                               "startTime": event['start']['dateTime'],
-                               "endTime": event['end']['dateTime']})
+            result.append({'summary': event['summary'],
+                           "startTime": event['start']['dateTime'],
+                           "endTime": event['end']['dateTime']})
 
-    return flask.jsonify(events=cal_events)
+    return flask.jsonify(result)
 
 
 ####
