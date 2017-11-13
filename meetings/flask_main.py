@@ -192,16 +192,25 @@ def setrange():
     widget.
     """
     app.logger.debug("Entering setrange")
-    flask.flash("Setrange gave us '{}'".format(
-      request.form.get('daterange')))
+    flask.flash("Setrange gave us '{}' from '{}' to '{}'".format(
+      request.form.get('daterange'),
+      request.form.get('begintime'), request.form.get('endtime')))
     daterange = request.form.get('daterange')
     flask.session['daterange'] = daterange
+    flask.session['timerange'] = {'begintime': request.form.get('begintime'),
+                                  'endtime': request.form.get('endtime')}
     daterange_parts = daterange.split()
+
     flask.session['begin_date'] = interpret_date(daterange_parts[0])
     flask.session['end_date'] = interpret_date(daterange_parts[2])
-    app.logger.debug("Setrange parsed {} - {}  dates as {} - {}".format(
+    flask.session['begin_time'] = interpret_time(request.form.get('begintime'))
+    flask.session['end_time'] = interpret_time(request.form.get('endtime'))
+
+    app.logger.debug("Setrange parsed {} - {}  dates as {} - {} \n parsed {} - {} times as {} - {}".format(
       daterange_parts[0], daterange_parts[1],
-      flask.session['begin_date'], flask.session['end_date']))
+      flask.session['begin_date'], flask.session['end_date'],
+      flask.session['timerange']['begintime'], flask.session['timerange']['endtime'],
+      flask.session['begin_time'], flask.session['end_time']))
     return flask.redirect(flask.url_for("choose"))
 
 
@@ -215,24 +224,30 @@ def events():
     # Get GCal service
     service = get_gcal_service(valid_credentials())
     selected_cals = request.json['ids']
+
+    begin_time = arrow.get(flask.session['begin_time'])
+    end_time = arrow.get(flask.session['end_time'])
+
+    begin_dt = arrow.get(flask.session['begin_date']).shift(hours=+begin_time.hour,
+                                                            minutes=+begin_time.minute)
+    end_dt = arrow.get(flask.session['end_date']).shift(hours=+end_time.hour,
+                                                        minutes=+end_time.minute)
+
     result = [ ]
-
-    print(flask.session['begin_date'] + "\n" + flask.session['end_date'])
-
     # Go through selected IDs
     for cal_id in selected_cals:
         # Grab cal events for each id
         events = service.events().list(calendarId=cal_id, # Calendar selection
                                        timeMin=flask.session['begin_date'], # Open time
-                                       timeMax=next_day(flask.session['end_date']),   # Close time
-                                       singleEvents=True, # No recurring event selection, fixes no summary errors
+                                       timeMax=next_day(flask.session['end_date']), # Close time, adjusted by 1 day
+                                       singleEvents=True, # No recurring event selection, fixes no summary index errors
                                        orderBy="startTime").execute() # Order events by startTime and execute query
 
         for event in events['items']:
             # Append the event summary, start and end times
             result.append({'summary': event['summary'],
-                           "startTime": arrow.get(event['start']['dateTime']).format("MM/DD/YYYY, HH:mm"),
-                           "endTime": arrow.get(event['end']['dateTime']).format("MM/DD/YYYY, HH:mm")})
+                           "startTime": arrow.get(event['start']['dateTime']).format("MM/DD/YYYY HH:mm"), # Format to be human readable
+                           "endTime": arrow.get(event['end']['dateTime']).format("MM/DD/YYYY HH:mm")}) # Format to be human readable
 
     return flask.jsonify(result)
 
@@ -257,9 +272,10 @@ def init_session_values():
     flask.session["daterange"] = "{} - {}".format(
         tomorrow.format("MM/DD/YYYY"),
         nextweek.format("MM/DD/YYYY"))
-    # Default time span each day, 8 to 5
+    # Default time span each day, 9 to 5
     flask.session["begin_time"] = interpret_time("9am")
     flask.session["end_time"] = interpret_time("5pm")
+    flask.session["timerange"] = {'begintime': '09:00 AM', 'endtime': '5:00 PM'}
 
 def interpret_time( text ):
     """
