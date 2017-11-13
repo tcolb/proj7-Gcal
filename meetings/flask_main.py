@@ -225,29 +225,49 @@ def events():
     service = get_gcal_service(valid_credentials())
     selected_cals = request.json['ids']
 
+    # General date vars
     begin_time = arrow.get(flask.session['begin_time'])
     end_time = arrow.get(flask.session['end_time'])
 
-    begin_dt = arrow.get(flask.session['begin_date']).shift(hours=+begin_time.hour,
-                                                            minutes=+begin_time.minute)
-    end_dt = arrow.get(flask.session['end_date']).shift(hours=+end_time.hour,
-                                                        minutes=+end_time.minute)
+    begin_date = arrow.get(flask.session['begin_date'])
+    end_date = arrow.get(flask.session['end_date'])
+
+    # Get difference between begin and end dates
+    diff = end_date - begin_date
+
+    # Adjust for timerange
+    begin_dt = begin_date.shift(hours=+begin_time.hour,
+                                minutes=+begin_time.minute)
+    end_dt = begin_date.shift(hours=+end_time.hour,
+                            minutes=+end_time.minute)
+
 
     result = [ ]
     # Go through selected IDs
     for cal_id in selected_cals:
-        # Grab cal events for each id
-        events = service.events().list(calendarId=cal_id, # Calendar selection
-                                       timeMin=flask.session['begin_date'], # Open time
-                                       timeMax=next_day(flask.session['end_date']), # Close time, adjusted by 1 day
-                                       singleEvents=True, # No recurring event selection, fixes no summary index errors
-                                       orderBy="startTime").execute() # Order events by startTime and execute query
 
-        for event in events['items']:
-            # Append the event summary, start and end times
-            result.append({'summary': event['summary'],
-                           "startTime": arrow.get(event['start']['dateTime']).format("MM/DD/YYYY HH:mm"), # Format to be human readable
-                           "endTime": arrow.get(event['end']['dateTime']).format("MM/DD/YYYY HH:mm")}) # Format to be human readable
+        # Initialize query dates
+        begin_query = begin_dt.isoformat()
+        end_query = end_dt.isoformat()
+
+        # Iterate through number of days, make query between times for each day
+        for day in range(diff.days + 1): # Add one to account for first day
+            events = service.events().list(calendarId=cal_id, # Calendar selection
+                                           timeMin=begin_query, # Open time
+                                           timeMax=end_query, # Close time
+                                           singleEvents=True, # No recurring event selection, fixes no summary index errors
+                                           orderBy="startTime").execute() # Order events by startTime and execute query
+
+            # Grab cal events for each id
+            for event in events['items']:
+                # Append the event summary, start and end times
+                result.append({'summary': event['summary'],
+                               "startTime": arrow.get(event['start']['dateTime']).format("MM/DD/YYYY HH:mm"), # Format to be human readable
+                               "endTime": arrow.get(event['end']['dateTime']).format("MM/DD/YYYY HH:mm")}) # Format to be human readable
+
+            # Adjust query dates by one day for next iteration
+            begin_query = next_day(begin_query)
+            end_query = next_day(end_query)
 
     return flask.jsonify(result)
 
