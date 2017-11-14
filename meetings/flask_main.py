@@ -224,6 +224,7 @@ def events():
     # Get GCal service
     service = get_gcal_service(valid_credentials())
     selected_cals = request.json['ids']
+    print(selected_cals)
 
     # General date vars
     begin_date = arrow.get(flask.session['begin_date'])
@@ -254,9 +255,9 @@ def events():
                                "startTime": arrow.get(event['start']['dateTime']).format("MM/DD/YYYY HH:mm"), # Format to be human readable
                                "endTime": arrow.get(event['end']['dateTime']).format("MM/DD/YYYY HH:mm")}) # Format to be human readable
 
-            # Adjust dates by one day
-            begin_query = next_day(begin_query)
-            end_query = next_day(end_query)
+        # Adjust dates by one day
+        begin_query = next_day(begin_query)
+        end_query = next_day(end_query)
 
     return flask.jsonify(result)
 

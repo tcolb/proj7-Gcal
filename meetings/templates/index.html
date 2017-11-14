@@ -104,7 +104,7 @@
 <br/>
 </div>
 </div>
-<input type="submit" value="Choose" />
+<input type="submit" value="Choose" style="margin-bottom: 40px;" />
 </form>
 
     <!--
@@ -114,28 +114,32 @@
     prefer down then across).
     -->
 {% if g.calendars is defined  %}
+  <h5>Available calendars:</h5>
   <div class="row">
-  <div class="g_cals"
   {% for cal in g.calendars if cal.selected %}
     <div class="col-md-4">
       <!-- Create a checkbox, our selection method for the calendars -->
-      <label><input type="checkbox" name="calChk" value="{{ cal.id }}">{{ cal.summary }}</label>
+      <label><input type="checkbox" name="calChk" value="{{ cal.id }}"
+                    style="margin: 10px;">{{ cal.summary }}</label>
     </div>
     {% if loop.index is divisibleby 3 %}
       </div> <div class="row">
     {% endif %}
   {% endfor %}
   </div>
+  <div class="row">
+    <input type="submit" id="subChk" value="Query"
+           style="margin: 15px">
+  </div>
 {% endif %}
 
 <div class="row">
-  <div id="allEvents" style="margin-top: 20px;">
-  </div>
+  <div id="allEvents" style="margin-top: 20px; margin-left: 10px"></div>
 </div>
 
 <script>
 
-  $("input[name='calChk']").change(function() {
+  $("#subChk").click(function() {
     /*
     Listen for checkbox state change, then make ajax post/get to flask,
     sending selected calendar ids, and getting event list
@@ -162,6 +166,8 @@
         $("#allEvents").empty();
         console.log("Writing new event data to UI...");
 
+        // Add events header
+        $("#allEvents").append("<h5>Events:</h5>")
         // Iterate through events
         for (i = 0; i < data.length; i++) {
           // Add event to html
