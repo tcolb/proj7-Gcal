@@ -226,35 +226,30 @@ def events():
     selected_cals = request.json['ids']
 
     # General date vars
-    begin_time = arrow.get(flask.session['begin_time'])
-    end_time = arrow.get(flask.session['end_time'])
-
     begin_date = arrow.get(flask.session['begin_date'])
     end_date = arrow.get(flask.session['end_date'])
 
     # Get difference between begin and end dates
-    diff = end_date - begin_date
+    if begin_date == end_date: # Don't want 0, so loop still runs
+        diff = 1
+    else: # Sub 1 so don't over query in range(diff) logic
+        diff = ((end_date - begin_date).days) - 1
+
 
     # Adjust for timerange
-    begin_dt = begin_date.shift(hours=+begin_time.hour,
-                                minutes=+begin_time.minute)
-    end_dt = begin_date.shift(hours=+end_time.hour,
-                            minutes=+end_time.minute)
+    begin_query = add_time(begin_date, flask.session['begin_time'])
+    end_query = add_time(end_date, flask.session['end_time'])
 
 
     result = [ ]
-    # Go through selected IDs
-    for cal_id in selected_cals:
+    # Iterate through number of days, make query between times for each day
+    for day in range(diff):
 
-        # Initialize query dates
-        begin_query = begin_dt.isoformat()
-        end_query = end_dt.isoformat()
-
-        # Iterate through number of days, make query between times for each day
-        for day in range(diff.days + 1): # Add one to account for first day
+        # Iterate through selected ids
+        for cal_id in selected_cals:
             events = service.events().list(calendarId=cal_id, # Calendar selection
-                                           timeMin=begin_query, # Open time
-                                           timeMax=end_query, # Close time
+                                           timeMin=shift_days(begin_query, day), # Open time
+                                           timeMax=shift_days(end_query, day), # Close time
                                            singleEvents=True, # No recurring event selection, fixes no summary index errors
                                            orderBy="startTime").execute() # Order events by startTime and execute query
 
@@ -264,10 +259,6 @@ def events():
                 result.append({'summary': event['summary'],
                                "startTime": arrow.get(event['start']['dateTime']).format("MM/DD/YYYY HH:mm"), # Format to be human readable
                                "endTime": arrow.get(event['end']['dateTime']).format("MM/DD/YYYY HH:mm")}) # Format to be human readable
-
-            # Adjust query dates by one day for next iteration
-            begin_query = next_day(begin_query)
-            end_query = next_day(end_query)
 
     return flask.jsonify(result)
 
@@ -340,12 +331,23 @@ def interpret_date( text ):
         raise
     return as_arrow.isoformat()
 
-def next_day(isotext):
+def shift_days(isotext, n):
     """
     ISO date + 1 day (used in query to Google calendar)
     """
     as_arrow = arrow.get(isotext)
-    return as_arrow.replace(days=+1).isoformat()
+    return as_arrow.replace(days=+n).isoformat()
+
+def add_time(date_text, time_text):
+    """
+    Add hour and minute component from ISO date to another ISO date
+    """
+    date_arrow = arrow.get(date_text)
+    time_arrow = arrow.get(time_text)
+
+    return date_arrow.shift(hours=+time_arrow.hour,
+                            minutes=+time_arrow.minute).isoformat()
+
 
 ####
 #
@@ -434,3 +436,54 @@ if __name__ == "__main__":
   # exist whether this is 'main' or not
   # (e.g., if we are running under green unicorn)
   app.run(port=CONFIG.PORT,host="0.0.0.0")
+
+
+"""
+@app.route('/_events', methods=['POST', 'GET'])
+def events():
+
+    # Get GCal service
+    service = get_gcal_service(valid_credentials())
+    selected_cals = request.json['ids']
+
+    # General date vars
+    begin_date = arrow.get(flask.session['begin_date'])
+    end_date = arrow.get(flask.session['end_date'])
+
+    # Get difference between begin and end dates
+    diff = end_date - begin_date
+
+    # Adjust for timerange
+    begin_dt = add_time(begin_date, flask.session['begin_time'])
+    end_dt = add_time(end_date, flask.session['end_time'])
+
+
+    result = [ ]
+    # Go through selected IDs
+    for cal_id in selected_cals:
+
+        # Initialize query dates, used so
+        begin_query = begin_dt
+        end_query = end_dt
+
+        # Iterate through number of days, make query between times for each day
+        for day in range(diff.days + 1): # Add one to account for first day
+            events = service.events().list(calendarId=cal_id, # Calendar selection
+                                           timeMin=begin_query, # Open time
+                                           timeMax=end_query, # Close time
+                                           singleEvents=True, # No recurring event selection, fixes no summary index errors
+                                           orderBy="startTime").execute() # Order events by startTime and execute query
+
+            # Grab cal events for each id
+            for event in events['items']:
+                # Append the event summary, start and end times
+                result.append({'summary': event['summary'],
+                               "startTime": arrow.get(event['start']['dateTime']).format("MM/DD/YYYY HH:mm"), # Format to be human readable
+                               "endTime": arrow.get(event['end']['dateTime']).format("MM/DD/YYYY HH:mm")}) # Format to be human readable
+
+            # Adjust query dates by one day for next iteration
+            begin_query = next_day(begin_query)
+            end_query = next_day(end_query)
+
+    return flask.jsonify(result)
+"""
