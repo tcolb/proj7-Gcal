@@ -230,26 +230,20 @@ def events():
     end_date = arrow.get(flask.session['end_date'])
 
     # Get difference between begin and end dates
-    if begin_date == end_date: # Don't want 0, so loop still runs
-        diff = 1
-    else: # Sub 1 so don't over query in range(diff) logic
-        diff = ((end_date - begin_date).days) - 1
-
+    diff = ((end_date - begin_date).days) + 1 # Add one to account for first day
 
     # Adjust for timerange
     begin_query = add_time(begin_date, flask.session['begin_time'])
-    end_query = add_time(end_date, flask.session['end_time'])
-
+    end_query = add_time(begin_date, flask.session['end_time'])
 
     result = [ ]
     # Iterate through number of days, make query between times for each day
     for day in range(diff):
-
         # Iterate through selected ids
         for cal_id in selected_cals:
             events = service.events().list(calendarId=cal_id, # Calendar selection
-                                           timeMin=shift_days(begin_query, day), # Open time
-                                           timeMax=shift_days(end_query, day), # Close time
+                                           timeMin=begin_query, # Open time
+                                           timeMax=end_query, # Close time
                                            singleEvents=True, # No recurring event selection, fixes no summary index errors
                                            orderBy="startTime").execute() # Order events by startTime and execute query
 
@@ -259,6 +253,10 @@ def events():
                 result.append({'summary': event['summary'],
                                "startTime": arrow.get(event['start']['dateTime']).format("MM/DD/YYYY HH:mm"), # Format to be human readable
                                "endTime": arrow.get(event['end']['dateTime']).format("MM/DD/YYYY HH:mm")}) # Format to be human readable
+
+            # Adjust dates by one day
+            begin_query = next_day(begin_query)
+            end_query = next_day(end_query)
 
     return flask.jsonify(result)
 
@@ -331,12 +329,12 @@ def interpret_date( text ):
         raise
     return as_arrow.isoformat()
 
-def shift_days(isotext, n):
+def next_day(isotext):
     """
     ISO date + 1 day (used in query to Google calendar)
     """
     as_arrow = arrow.get(isotext)
-    return as_arrow.replace(days=+n).isoformat()
+    return as_arrow.replace(days=+1).isoformat()
 
 def add_time(date_text, time_text):
     """
